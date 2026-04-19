@@ -137,17 +137,21 @@ def _run_pipeline(
     # After scores
     quality_after = validator.compute_quality_score(cleaned_df)
 
-    # AI Summary
+    # AI Summary & Profile
     ai_summary = None
+    ai_profile = None
     if options.use_ai and ai_service:
         try:
+            # Generate summary of what was cleaned
             ai_summary = ai_service.generate_cleaning_summary(
                 cleaning_report.model_dump(),
                 quality_before.model_dump(),
                 quality_after.model_dump()
             )
+            # Also generate a profile of the final cleaned data
+            ai_profile = ai_service.profile_dataset(cleaned_df)
         except Exception as exc:
-            logger.warning("Failed to generate AI cleaning summary: %s", exc)
+            logger.warning("Failed to generate AI cleaning insights: %s", exc)
 
     elapsed = round((time.perf_counter() - start) * 1000, 2)
 
@@ -177,4 +181,5 @@ def _run_pipeline(
         data=data,
         processing_time_ms=elapsed,
         ai_summary=ai_summary,
+        ai_profile=ai_profile,
     )

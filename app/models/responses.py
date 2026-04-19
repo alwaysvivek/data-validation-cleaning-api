@@ -61,6 +61,7 @@ class ProcessResult(BaseModel):
     data: list[dict[str, Any]]
     processing_time_ms: float
     ai_summary: Optional[str] = None
+    ai_profile: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

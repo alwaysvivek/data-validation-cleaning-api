@@ -129,26 +129,15 @@
 
             <hr class="border-gray-200">
 
-            <!-- Step 3: AI Tools (De-emphasized) -->
+            <!-- Step 3: AI Layer -->
             <div class="space-y-4">
                 <h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase flex justify-between items-center">
-                    3. AI Layer <span class="text-[10px] bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">Optional</span>
+                    3. AI Layer <span class="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full border border-indigo-100">Smart</span>
                 </h2>
                 
                 <div class="space-y-3">
-                    <input type="password" id="groqApiKey" placeholder="Groq API Key (uses env default if blank)" 
+                    <input type="password" id="groqApiKey" placeholder="Groq API Key (required for Smart Fixes)" 
                         class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-2 px-3 border bg-white">
-                    
-                    <div class="grid grid-cols-2 gap-2">
-                        <button type="button" id="btnSuggest" 
-                            class="bg-gray-100 hover:bg-gray-200 text-gray-600 py-1.5 rounded-md text-sm font-medium transition">
-                            Suggest Fixes
-                        </button>
-                        <button type="button" id="btnProfile" 
-                            class="bg-gray-100 hover:bg-gray-200 text-gray-600 py-1.5 rounded-md text-sm font-medium transition">
-                            Profile Dataset
-                        </button>
-                    </div>
                 </div>
             </div>
 
@@ -402,14 +391,42 @@
                     const data = await response.json();
                     currentJsonData = data.data; // Store for AI
                     
-                    if (data.ai_summary) {
-                        renderAIResult(data.ai_summary, 'profile');
-                        // Inject summary header
-                        document.getElementById('outputContainer').insertAdjacentHTML('afterbegin', `
-                            <div style="padding: 1.5rem 1.5rem 0; color: #818cf8; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.85rem; font-weight: bold;">
-                                > AI Processing Summary
-                            </div>
-                        `);
+                    if (data.ai_profile || data.ai_summary) {
+                        const container = document.getElementById('outputContainer');
+                        container.innerHTML = '';
+                        
+                        if (data.ai_profile) {
+                            renderAIResult(data.ai_profile, 'profile');
+                        }
+                        
+                        if (data.ai_summary) {
+                            const summaryHtml = `
+                                <div style="padding: 1.5rem 1.5rem 0; color: #818cf8; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.85rem; font-weight: bold; border-top: 1px solid #374151; margin-top: 1rem;">
+                                    > AI Processing Summary
+                                </div>
+                            `;
+                            container.insertAdjacentHTML('beforeend', summaryHtml);
+                            
+                            // Create a temporary element to use renderAIResult's logic for the summary
+                            const tempDiv = document.createElement('div');
+                            tempDiv.id = 'tempSummary';
+                            container.appendChild(tempDiv);
+                            
+                            const paragraphs = data.ai_summary.split('\n').filter(p => p.trim() !== '');
+                            const html = paragraphs.map(p => {
+                                const escaped = escapeHTML(p);
+                                let clean = escaped.replace(/\*\*(.*?)\*\*/g, '<span style="color: #a5b4fc; font-weight: bold;">$1</span>');
+                                if (p.trim().match(/^[0-9]+\.\s/)) {
+                                    return `<p style="margin-bottom: 0.5rem; line-height: 1.6; padding-left: 1rem; color: #9ca3af;">${clean}</p>`;
+                                }
+                                if (p.trim().startsWith('- ') || p.trim().startsWith('* ')) {
+                                    return `<p style="margin-bottom: 0.5rem; line-height: 1.6; padding-left: 1rem; color: #9ca3af;">• ${clean.replace(/^[-*]\s/, '')}</p>`;
+                                }
+                                return `<p style="margin-bottom: 1rem; line-height: 1.6;">${clean}</p>`;
+                            }).join('');
+                            
+                            tempDiv.innerHTML = `<div style="padding: 1rem 1.5rem; color: #e5e7eb; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.85rem;">${html}</div>`;
+                        }
                     } else {
                         displayJSON(data);
                     }
