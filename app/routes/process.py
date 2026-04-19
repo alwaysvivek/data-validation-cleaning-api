@@ -32,14 +32,37 @@ validator = DataValidator()
 cleaner = DataCleaner()
 file_handler = FileHandler()
 
+def _merge_dfs(dfs: list[pd.DataFrame]) -> pd.DataFrame:
+    """Intelligently merge multiple DataFrames based on common keys or orientation."""
+    if not dfs:
+        return pd.DataFrame()
+    if len(dfs) == 1:
+        return dfs[0]
+        
+    merged = dfs[0]
+    for next_df in dfs[1:]:
+        common = list(set(merged.columns) & set(next_df.columns))
+        if common:
+            # Join on common columns (IDs, Categories, etc.)
+            merged = pd.merge(merged, next_df, on=common, how="outer")
+        else:
+            # No common columns? Side-by-side concatenation
+            merged = pd.concat([merged, next_df], axis=1)
+    return merged
+
 # ---------------------------------------------------------------------------
 # Preview
 # ---------------------------------------------------------------------------
 @router.post("/preview/file", response_model=PreviewResult)
 @limiter.limit("20/minute")
-async def preview_file(request: Request, file: UploadFile = File(...)):
-    """Upload a file and get a quick preview: first N rows, column types, and quality score."""
-    df = await file_handler.read_upload(file)
+async def preview_file(request: Request, files: list[UploadFile] = File(...)):
+    """Upload multiple files and get a quick preview of the merged result."""
+    dfs = []
+    for file in files:
+        df = await file_handler.read_upload(file)
+        dfs.append(df)
+        
+    df = _merge_dfs(dfs)
     n = settings.DEFAULT_PREVIEW_ROWS
     
     # Offload CPU-bound task to thread
@@ -90,18 +113,24 @@ async def process_json(
 @limiter.limit("10/minute")
 async def process_file(
     request: Request,
-    file: UploadFile = File(...),
+    files: list[UploadFile] = File(...),
     options: str = Form("{}"),
     format: Literal["json", "csv", "excel"] = Query("json"),
     limit: Optional[int] = Query(None, ge=1, description="Process only first N rows"),
     x_groq_api_key: Optional[str] = Header(None),
 ):
-    """Upload a file and run the full validate → clean → score pipeline.
-
-    Cleaning options are passed as a JSON string in the ``options`` form field.
+    """Upload multiple files and run the full validate → clean → score pipeline.
+    
+    If multiple files are provided, they are merged based on common column names.
     """
     start = time.perf_counter()
-    df = await file_handler.read_upload(file)
+    
+    dfs = []
+    for file in files:
+        df = await file_handler.read_upload(file)
+        dfs.append(df)
+
+    merged_df = _merge_dfs(dfs)
 
     try:
         opts = CleaningOptions(**json.loads(options))
@@ -109,7 +138,7 @@ async def process_file(
         opts = CleaningOptions()
 
     ai_service = GroqAIService(api_key=x_groq_api_key) if opts.use_ai else None
-    return await asyncio.to_thread(_run_pipeline, df, opts, format, limit, start, ai_service)
+    return await asyncio.to_thread(_run_pipeline, merged_df, opts, format, limit, start, ai_service)
 
 
 # ---------------------------------------------------------------------------

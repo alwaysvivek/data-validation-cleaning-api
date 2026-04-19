@@ -23,10 +23,31 @@ class DataCleaner:
     @staticmethod
     def _standardize_name(name: str) -> str:
         """Convert a column name to snake_case."""
-        s = name.strip()
+        s = str(name).strip()
         s = re.sub(r"[^\w\s]", "", s)   # remove special chars
         s = re.sub(r"\s+", "_", s)       # spaces → underscores
         return s.lower()
+
+    def _ensure_unique_names(self, current_columns: list[str], renames: dict[str, str]) -> dict[str, str]:
+        """Ensure renames do not cause collisions."""
+        final_map = {}
+        used_names = set()
+        
+        # Keep existing names that aren't being changed
+        for col in current_columns:
+            if col not in renames:
+                used_names.add(col)
+        
+        # Process renames with collision avoidance
+        for old_name, new_name in renames.items():
+            candidate = new_name
+            counter = 1
+            while candidate in used_names:
+                candidate = f"{new_name}_{counter}"
+                counter += 1
+            final_map[old_name] = candidate
+            used_names.add(candidate)
+        return final_map
 
     def clean(
         self,
@@ -51,27 +72,31 @@ class DataCleaner:
 
         # ---- 2. Strip whitespace -------------------------------------------
         if options.strip_whitespace:
-            str_cols = df.select_dtypes(include="object").columns
-            for col in str_cols:
-                df[col] = df[col].astype(str).str.strip().replace("nan", pd.NA)
-            logger.info("Stripped whitespace on %d string column(s)", len(str_cols))
+            for col in df.columns:
+                if df[col].dtype == "object":
+                    df[col] = df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
+            logger.info("Stripped whitespace on string columns")
 
         # ---- 2.5 AI-Powered Renaming ---------------------------------------
         if options.use_ai and ai_service:
-            ai_renames = ai_service.suggest_column_renames(df)
-            if ai_renames:
+            ai_suggestions = ai_service.suggest_column_renames(df)
+            if ai_suggestions:
+                ai_renames = self._ensure_unique_names(list(df.columns), ai_suggestions)
                 df.rename(columns=ai_renames, inplace=True)
                 columns_renamed.update(ai_renames)
                 logger.info("AI suggested %d column rename(s)", len(ai_renames))
 
         # ---- 3. Standardize column names -----------------------------------
         if options.standardize_columns:
-            new_names = {col: self._standardize_name(col) for col in df.columns}
-            renamed = {k: v for k, v in new_names.items() if k != v}
-            if renamed:
-                df.rename(columns=new_names, inplace=True)
-                columns_renamed = renamed
-                logger.info("Renamed %d column(s)", len(renamed))
+            std_suggestions = {col: self._standardize_name(col) for col in df.columns}
+            std_renames = self._ensure_unique_names(list(df.columns), std_suggestions)
+            
+            # Only rename if it actually changes the name
+            actual_renames = {k: v for k, v in std_renames.items() if k != v}
+            if actual_renames:
+                df.rename(columns=actual_renames, inplace=True)
+                columns_renamed.update(actual_renames)
+                logger.info("Standardized %d column name(s)", len(actual_renames))
 
         # ---- 4. Remove empty rows ------------------------------------------
         if options.remove_empty_rows:

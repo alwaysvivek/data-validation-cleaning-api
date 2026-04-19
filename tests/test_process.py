@@ -64,7 +64,7 @@ class TestProcessJSON:
         payload = {
             "data": [
                 {"name": "Alice", "age": 30},
-                {"name": None, "age": None},
+                {"name": "Bob", "age": None},
             ],
             "options": {"handle_nulls": "drop"},
         }
@@ -77,7 +77,7 @@ class TestProcessJSON:
         payload = {
             "data": [
                 {"name": "Alice", "age": 30},
-                {"name": None, "age": None},
+                {"name": "Bob", "age": None},
             ],
             "options": {"handle_nulls": "fill_empty", "remove_duplicates": False},
         }
@@ -132,7 +132,7 @@ class TestProcessFile:
     def test_csv_upload(self, client, messy_csv_bytes):
         resp = client.post(
             "/api/v1/process/file",
-            files={"file": ("test.csv", io.BytesIO(messy_csv_bytes), "text/csv")},
+            files={"files": ("test.csv", io.BytesIO(messy_csv_bytes), "text/csv")},
         )
         assert resp.status_code == 200
         body = resp.json()
@@ -142,14 +142,14 @@ class TestProcessFile:
     def test_excel_upload(self, client, messy_excel_bytes):
         resp = client.post(
             "/api/v1/process/file",
-            files={"file": ("test.xlsx", io.BytesIO(messy_excel_bytes), "application/octet-stream")},
+            files={"files": ("test.xlsx", io.BytesIO(messy_excel_bytes), "application/octet-stream")},
         )
         assert resp.status_code == 200
 
     def test_unsupported_file_type(self, client):
         resp = client.post(
             "/api/v1/process/file",
-            files={"file": ("test.txt", io.BytesIO(b"hello"), "text/plain")},
+            files={"files": ("test.txt", io.BytesIO(b"hello"), "text/plain")},
         )
         assert resp.status_code == 422
         assert resp.json()["error"] == "UNSUPPORTED_FILE_TYPE"
@@ -157,7 +157,7 @@ class TestProcessFile:
     def test_csv_export_from_file(self, client, messy_csv_bytes):
         resp = client.post(
             "/api/v1/process/file?format=csv",
-            files={"file": ("test.csv", io.BytesIO(messy_csv_bytes), "text/csv")},
+            files={"files": ("test.csv", io.BytesIO(messy_csv_bytes), "text/csv")},
         )
         assert resp.status_code == 200
         assert "text/csv" in resp.headers["content-type"]
@@ -166,7 +166,7 @@ class TestProcessFile:
         opts = json.dumps({"handle_nulls": "fill_empty", "remove_duplicates": False})
         resp = client.post(
             "/api/v1/process/file",
-            files={"file": ("test.csv", io.BytesIO(messy_csv_bytes), "text/csv")},
+            files={"files": ("test.csv", io.BytesIO(messy_csv_bytes), "text/csv")},
             data={"options": opts},
         )
         assert resp.status_code == 200
@@ -184,7 +184,7 @@ class TestErrorResponses:
     def test_error_has_structure(self, client):
         resp = client.post(
             "/api/v1/process/file",
-            files={"file": ("bad.txt", io.BytesIO(b"data"), "text/plain")},
+            files={"files": ("bad.txt", io.BytesIO(b"data"), "text/plain")},
         )
         body = resp.json()
         assert "error" in body

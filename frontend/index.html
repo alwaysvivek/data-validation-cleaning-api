@@ -71,7 +71,7 @@
                 
                 <form id="uploadForm" class="space-y-3">
                     <div>
-                        <input type="file" id="fileInput" accept=".csv, .xlsx, .xls" required
+                        <input type="file" id="fileInput" accept=".csv, .xlsx, .xls" required multiple
                             class="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 transition">
                     </div>
                     <button type="button" id="btnPreview" 
@@ -333,7 +333,9 @@
             document.getElementById('improvementContainer').classList.add('hidden');
             
             const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
+            for (const file of fileInput.files) {
+                formData.append('files', file);
+            }
 
             try {
                 const response = await fetch('/api/v1/preview/file', {
@@ -361,13 +363,15 @@
 
         // Process Logic
         btnProcess.addEventListener('click', async () => {
-            if (!fileInput.files[0]) return alert("Please select a file first.");
+            if (fileInput.files.length === 0) return alert("Please select one or more files first.");
             
             const format = document.getElementById('exportFormat').value;
-            updateStatus(`Processing (${format})...`);
+            updateStatus(`Processing ${fileInput.files.length} files...`);
             
             const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
+            for (const file of fileInput.files) {
+                formData.append('files', file);
+            }
             formData.append('options', JSON.stringify(getOptions()));
 
             try {
