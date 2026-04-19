@@ -3,312 +3,417 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Validation & Cleaning API</title>
+    <title>CleanSlate AI | Data Validation & Cleaning</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        /* Custom styles for the console / output area */
-        .console-output {
-            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-            white-space: pre-wrap;
-            background-color: #111827; /* Tailwind gray-900 */
-            color: #d1d5db; /* Tailwind gray-300 */
-            border-radius: 0.375rem;
-            height: 100%;
-            overflow-y: auto;
+        :root {
+            --accent: #6366f1;
+            --bg: #f8fafc;
         }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: #1e293b;
+        }
+        .outfit { font-family: 'Outfit', sans-serif; }
+        .glass {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .console-bg {
+            background-color: #0f172a;
+        }
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 0.125rem 0.5rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+        .grade-A { color: #10b981; }
+        .grade-B { color: #3b82f6; }
+        .grade-C { color: #f59e0b; }
+        .grade-D { color: #f97316; }
+        .grade-F { color: #ef4444; }
         
-        .console-output pre {
-            margin: 0;
-            padding: 1.5rem;
-        }
-
-        /* Subtle scrollbars for the console */
-        .console-output::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        .console-output::-webkit-scrollbar-track {
-            background: #1f2937; 
-            border-radius: 4px;
-        }
-        .console-output::-webkit-scrollbar-thumb {
-            background: #4b5563; 
-            border-radius: 4px;
-        }
-        .console-output::-webkit-scrollbar-thumb:hover {
-            background: #6b7280; 
-        }
-
-        /* Score strip colors */
-        .grade-A { color: #10b981; } /* emerald-500 */
-        .grade-B { color: #3b82f6; } /* blue-500 */
-        .grade-C { color: #eab308; } /* yellow-500 */
-        .grade-D { color: #f97316; } /* orange-500 */
-        .grade-F { color: #ef4444; } /* red-500 */
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col">
 
-    <!-- Header: Understated and minimal -->
-    <header class="bg-white border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-baseline">
-            <h1 class="text-lg font-medium tracking-tight text-gray-900">Data Validation & Cleaning</h1>
-            <a href="/docs" target="_blank" class="text-sm text-gray-500 hover:text-indigo-600 transition">
-                API Docs
-            </a>
+    <!-- Header -->
+    <header class="glass sticky top-0 z-50 px-6 py-4 flex justify-between items-center shadow-sm">
+        <div class="flex items-center space-x-2">
+            <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold outfit">C</div>
+            <h1 class="text-lg font-semibold tracking-tight outfit">CleanSlate <span class="text-indigo-600 font-normal">AI</span></h1>
+        </div>
+        <div id="statusBar" class="flex items-center space-x-3">
+            <span id="statusLabel" class="status-badge bg-gray-100 text-gray-500 border border-gray-200">Idle</span>
+            <span id="processingTime" class="text-[10px] text-gray-400 font-mono hidden">--ms</span>
         </div>
     </header>
 
-    <!-- Main Content: Two columns -->
-    <main class="flex-grow max-w-7xl mx-auto px-6 py-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-10">
+    <main class="flex-1 flex overflow-hidden">
         
-        <!-- Left Column: Controls (Stacked Workflow) -->
-        <section class="lg:col-span-4 flex flex-col space-y-8">
+        <!-- Left: Control Panel -->
+        <aside class="w-[380px] border-r border-gray-200 bg-white p-6 overflow-y-auto space-y-8 flex flex-col">
             
-            <!-- Step 1: Upload -->
-            <div class="space-y-4">
-                <h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">1. Upload</h2>
-                
-                <form id="uploadForm" class="space-y-3">
-                    <div>
-                        <input type="file" id="fileInput" accept=".csv, .xlsx, .xls" required multiple
-                            class="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 transition">
+            <!-- Core Action: Upload & Go -->
+            <div class="space-y-6">
+                <div class="space-y-2">
+                    <h2 class="text-sm font-semibold tracking-wide text-gray-900 uppercase outfit">1. Source</h2>
+                    <p class="text-xs text-gray-500">Upload messy CSV/Excel files to begin smart cleaning.</p>
+                </div>
+
+                <div id="dropZone" class="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-indigo-400 transition-all cursor-pointer bg-gray-50">
+                    <input type="file" id="fileInput" class="hidden" multiple accept=".csv,.xlsx,.xls">
+                    <div class="space-y-3">
+                        <div class="mx-auto w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center">
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        </div>
+                        <div id="fileName" class="text-sm font-medium text-gray-600">Click to upload</div>
+                        <p class="text-[10px] text-gray-400">Multiple files will be auto-merged</p>
                     </div>
-                    <button type="button" id="btnPreview" 
-                        class="w-full bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 py-2 rounded-md text-sm font-medium transition shadow-sm">
-                        Preview Data
-                    </button>
-                </form>
+                </div>
+
+                <div class="space-y-3">
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Groq API Key</label>
+                    <input type="password" id="groqApiKey" placeholder="Paste your key here..." 
+                        class="block w-full rounded-lg border-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-2 px-3 border bg-gray-50 transition-all">
+                    <p class="text-[10px] text-gray-400 italic">Key is stored locally in your browser.</p>
+                </div>
+
+                <button id="btnProcess" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold transition-all shadow-lg shadow-indigo-100 flex items-center justify-center space-x-2 group">
+                    <span>Smart Clean & Process</span>
+                    <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                </button>
+                
+                <button id="btnPreview" class="w-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm">
+                    Preview Data
+                </button>
             </div>
 
-            <hr class="border-gray-200">
+            <hr class="border-gray-100">
 
-            <!-- Step 2: Options -->
+            <!-- Advanced Settings (Collapsed) -->
             <div class="space-y-4">
-                <h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">2. Cleaning Options</h2>
+                <button id="toggleAdvanced" class="flex items-center justify-between w-full text-xs font-semibold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-all">
+                    <span>Advanced Options</span>
+                    <svg id="advancedChevron" class="w-3 h-3 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
                 
-                <div class="space-y-2 text-sm text-gray-600">
-                    <label class="flex items-center space-x-2 cursor-pointer hover:text-gray-900">
-                        <input type="checkbox" id="optStrip" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked>
-                        <span>Strip Whitespace</span>
-                    </label>
-                    <label class="flex items-center space-x-2 cursor-pointer hover:text-gray-900">
-                        <input type="checkbox" id="optStandardizeCols" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked>
-                        <span>Standardize Column Names</span>
-                    </label>
-                    <label class="flex items-center space-x-2 cursor-pointer hover:text-gray-900">
-                        <input type="checkbox" id="optRemoveEmpty" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked>
-                        <span>Remove Fully Empty Rows</span>
-                    </label>
-                    <label class="flex items-center space-x-2 cursor-pointer hover:text-gray-900">
-                        <input type="checkbox" id="optRemoveDups" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked>
-                        <span>Remove Duplicate Rows</span>
-                    </label>
-                    <label class="flex items-center space-x-2 cursor-pointer hover:text-gray-900">
-                        <input type="checkbox" id="optConvertDates" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked>
-                        <span>Auto-convert Dates</span>
-                    </label>
-                    <label class="flex items-center space-x-2 cursor-pointer hover:text-gray-900 font-medium text-indigo-600">
-                        <input type="checkbox" id="optUseAI" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                        <span>Smart AI Rename (Needs Key)</span>
-                    </label>
-                    
-                    <div class="pt-3">
-                        <label class="block font-medium text-gray-700 mb-1">Null Strategy</label>
-                        <select id="optHandleNulls" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-2 px-3 border bg-white">
-                            <option value="none">None (Leave as-is)</option>
-                            <option value="drop">Drop row</option>
+                <div id="advancedSettings" class="hidden space-y-4 pt-2">
+                    <div class="space-y-2 text-sm text-gray-600">
+                        <label class="flex items-center space-x-2 cursor-pointer hover:text-gray-900 transition-all">
+                            <input type="checkbox" id="optUseAI" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked>
+                            <span>Enable Smart AI Renaming</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer hover:text-gray-900 transition-all">
+                            <input type="checkbox" id="optStrip" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked>
+                            <span>Strip Whitespace</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer hover:text-gray-900 transition-all">
+                            <input type="checkbox" id="optStandardizeCols" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked>
+                            <span>Standardize Column Names</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer hover:text-gray-900 transition-all">
+                            <input type="checkbox" id="optRemoveEmpty" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked>
+                            <span>Remove Fully Empty Rows</span>
+                        </label>
+                    </div>
+
+                    <div class="space-y-3">
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase">Null Handling</label>
+                        <select id="optNulls" class="block w-full rounded-lg border-gray-200 text-xs py-2 bg-gray-50">
                             <option value="fill_empty" selected>Fill empty string</option>
-                            <option value="fill_mean">Fill Mean (numeric)</option>
-                            <option value="fill_median">Fill Median (numeric)</option>
-                            <option value="fill_mode">Fill Mode</option>
+                            <option value="drop">Drop row</option>
+                            <option value="none">Ignore</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-3">
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase">Export Format</label>
+                        <select id="exportFormat" class="block w-full rounded-lg border-gray-200 text-xs py-2 bg-gray-50">
+                            <option value="json" selected>JSON (Console)</option>
+                            <option value="csv">CSV (Download)</option>
+                            <option value="excel">Excel (Download)</option>
                         </select>
                     </div>
                 </div>
             </div>
 
-            <hr class="border-gray-200">
-
-            <!-- Step 3: AI Layer -->
-            <div class="space-y-4">
-                <h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase flex justify-between items-center">
-                    3. AI Layer <span class="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full border border-indigo-100">Smart</span>
-                </h2>
+            <!-- Quality Score (Visible after process) -->
+            <div id="scoreContainer" class="hidden pt-4 mt-auto border-t border-gray-100">
+                <div class="bg-gray-50 rounded-xl p-4 space-y-4">
+                    <div class="flex justify-between items-end">
+                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Quality Score</span>
+                        <span id="scoreGrade" class="grade-B text-2xl font-bold outfit">B</span>
+                    </div>
+                    <div class="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                        <div id="scoreProgress" class="h-full bg-indigo-600 transition-all duration-1000" style="width: 0%"></div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-center border-t border-gray-200 pt-3">
+                        <div>
+                            <div id="scoreOverall" class="text-sm font-bold text-gray-700">--</div>
+                            <div class="text-[8px] text-gray-400 uppercase">Overall</div>
+                        </div>
+                        <div>
+                            <div id="scoreNull" class="text-sm font-bold text-gray-700">--</div>
+                            <div class="text-[8px] text-gray-400 uppercase">Nulls</div>
+                        </div>
+                        <div>
+                            <div id="scoreDup" class="text-sm font-bold text-gray-700">--</div>
+                            <div class="text-[8px] text-gray-400 uppercase">Dups</div>
+                        </div>
+                    </div>
+                </div>
                 
-                <div class="space-y-3">
-                    <input type="password" id="groqApiKey" placeholder="Groq API Key (required for Smart Fixes)" 
-                        class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-2 px-3 border bg-white">
+                <!-- Improvement Badge -->
+                <div id="improvementContainer" class="mt-3 hidden items-center justify-center space-x-1 text-xs font-medium text-emerald-600 bg-emerald-50 py-1.5 rounded-lg border border-emerald-100">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                    <span>Quality Improved from <span id="beforeGrade">F</span> (<span id="beforeScore">0</span>)</span>
                 </div>
             </div>
+        </aside>
 
-            <hr class="border-gray-200">
-
-            <!-- Step 4: Process -->
-            <div class="space-y-4 pb-10">
-                <h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">4. Execution</h2>
-                
-                <div class="space-y-3">
-                    <select id="exportFormat" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-2 px-3 border bg-white">
-                        <option value="json" selected>Output to Console (JSON)</option>
-                        <option value="csv">Download CSV</option>
-                        <option value="excel">Download Excel</option>
-                    </select>
-
-                    <button type="button" id="btnProcess" 
-                        class="w-full bg-indigo-600 text-white hover:bg-indigo-700 py-2.5 rounded-md text-sm font-medium transition shadow-sm">
-                        Execute Pipeline
-                    </button>
+        <!-- Right: Output Console -->
+        <section class="flex-1 flex flex-col bg-slate-900 overflow-hidden relative">
+            <div class="flex items-center justify-between px-6 py-3 border-b border-white/5 bg-slate-900/50 backdrop-blur">
+                <div class="flex items-center space-x-2">
+                    <div class="w-2 h-2 rounded-full bg-red-500/20 border border-red-500/50"></div>
+                    <div class="w-2 h-2 rounded-full bg-yellow-500/20 border border-yellow-500/50"></div>
+                    <div class="w-2 h-2 rounded-full bg-green-500/20 border border-green-500/50"></div>
+                    <span class="ml-2 text-[10px] font-mono text-slate-500 uppercase tracking-widest">Process Terminal</span>
                 </div>
+                <button id="btnClear" class="text-[10px] text-slate-500 hover:text-slate-300 transition-all font-mono uppercase tracking-widest">Clear Log</button>
             </div>
-
-        </section>
-
-        <!-- Right Column: Output Console -->
-        <section class="lg:col-span-8 flex flex-col h-[calc(100vh-140px)]">
             
-            <!-- Output Header & Status -->
-            <div class="flex justify-between items-end mb-3">
-                <div class="flex items-center gap-3">
-                    <h2 class="text-sm font-semibold text-gray-700">Console</h2>
-                    <span id="statusIndicator" class="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 font-medium tracking-wide">Ready</span>
-                </div>
-                <span id="processingTime" class="text-xs text-gray-400 font-mono"></span>
-            </div>
-
-            <!-- Metrics Strip (Hidden initially) -->
-            <div id="scoreContainer" class="hidden flex items-center gap-6 mb-4 px-4 py-2.5 bg-white border border-gray-200 rounded-md shadow-sm text-sm">
-                <div class="flex items-center gap-2 border-r border-gray-200 pr-6">
-                    <span class="text-gray-500 uppercase tracking-wide text-xs">Grade</span>
-                    <span id="scoreGrade" class="font-bold text-lg">-</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="text-gray-500">Overall:</span>
-                    <span id="scoreOverall" class="font-medium text-gray-900">-</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="text-gray-500">Nulls:</span>
-                    <span id="scoreNull" class="font-medium text-gray-900">-</span>
-                </div>
-                <div class="flex items-center gap-2 border-r border-gray-200 pr-6">
-                    <span class="text-gray-500">Dups:</span>
-                    <span id="scoreDup" class="font-medium text-gray-900">-</span>
-                </div>
-                <div id="improvementContainer" class="hidden text-xs font-medium text-emerald-600 flex items-center gap-1">
-                    <span>Improved from <span id="beforeGrade" class="font-bold"></span> (<span id="beforeScore"></span>)</span>
+            <div id="outputContainer" class="flex-1 overflow-auto font-mono text-sm leading-relaxed p-0 custom-scrollbar scroll-smooth">
+                <div class="p-8 text-slate-500 italic opacity-50 flex flex-col items-center justify-center h-full space-y-4">
+                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <p>Select a file to begin processing...</p>
                 </div>
             </div>
-
-            <!-- Console Window -->
-            <div class="console-output shadow-inner border border-gray-800" id="outputContainer">
-                <pre id="jsonOutput" class="text-xs text-gray-400">System initialized. Awaiting input...</pre>
-            </div>
-
         </section>
     </main>
 
     <script>
         // DOM Elements
         const fileInput = document.getElementById('fileInput');
-        const btnPreview = document.getElementById('btnPreview');
+        const dropZone = document.getElementById('dropZone');
         const btnProcess = document.getElementById('btnProcess');
-        const btnSuggest = document.getElementById('btnSuggest');
-        const btnProfile = document.getElementById('btnProfile');
-        
-        let currentJsonData = null; // Store dataset for AI requests
-        
-        // Options
-        const getOptions = () => ({
-            strip_whitespace: document.getElementById('optStrip').checked,
-            standardize_columns: document.getElementById('optStandardizeCols').checked,
-            remove_empty_rows: document.getElementById('optRemoveEmpty').checked,
-            handle_nulls: document.getElementById('optHandleNulls').value,
-            remove_duplicates: document.getElementById('optRemoveDups').checked,
-            convert_dates: document.getElementById('optConvertDates').checked,
-            use_ai: document.getElementById('optUseAI').checked,
+        const btnPreview = document.getElementById('btnPreview');
+        const btnClear = document.getElementById('btnClear');
+        const outputContainer = document.getElementById('outputContainer');
+        const statusBar = document.getElementById('statusLabel');
+        const groqApiKeyInput = document.getElementById('groqApiKey');
+        const toggleAdvanced = document.getElementById('toggleAdvanced');
+        const advancedSettings = document.getElementById('advancedSettings');
+        const advancedChevron = document.getElementById('advancedChevron');
+
+        let currentJsonData = null;
+
+        // Init localStorage
+        if (localStorage.getItem('groq_api_key')) {
+            groqApiKeyInput.value = localStorage.getItem('groq_api_key');
+        }
+
+        groqApiKeyInput.addEventListener('input', (e) => {
+            localStorage.setItem('groq_api_key', e.target.value);
         });
 
-        // UI Updates
-        const escapeHTML = (str) => {
-            if (!str || typeof str !== 'string') return str;
-            return str.replace(/[&<>"']/g, function(m) {
-                return {
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    '"': '&quot;',
-                    "'": '&#039;'
-                }[m];
-            });
+        // Toggle Advanced Settings
+        toggleAdvanced.addEventListener('click', () => {
+            const isHidden = advancedSettings.classList.contains('hidden');
+            advancedSettings.classList.toggle('hidden');
+            advancedChevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+        });
+
+        // Helpers
+        const updateStatus = (text, isError = false) => {
+            statusBar.textContent = text;
+            statusBar.className = `status-badge ${isError ? 'bg-red-50 text-red-600 border-red-200' : 'bg-indigo-50 text-indigo-600 border-indigo-200'}`;
         };
 
-        const updateStatus = (msg, isError = false) => {
-            const el = document.getElementById('statusIndicator');
-            el.textContent = msg;
-            if (isError) {
-                el.className = 'text-[11px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium tracking-wide';
-            } else if (msg === 'Ready') {
-                el.className = 'text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 font-medium tracking-wide';
-            } else {
-                el.className = 'text-[11px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium tracking-wide';
-            }
+        const escapeHTML = (str) => {
+            if (!str) return '';
+            return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
         };
 
         const displayJSON = (data) => {
-            document.getElementById('outputContainer').innerHTML = `<pre id="jsonOutput" class="text-xs"></pre>`;
-            document.getElementById('jsonOutput').textContent = JSON.stringify(data, null, 2);
+            const el = document.getElementById('finalJsonOutput');
+            const pre = el || document.createElement('pre');
+            if (!el) {
+                pre.id = 'finalJsonOutput';
+                pre.className = "p-8 text-slate-400 overflow-x-auto text-[11px] border-t border-white/5 mt-4 bg-slate-950/50";
+                outputContainer.appendChild(pre);
+            }
+            pre.textContent = JSON.stringify(data, null, 2);
         };
 
-        const renderAIResult = (data, action) => {
+        const renderTechnicalLog = (data) => {
             const container = document.getElementById('outputContainer');
-            // Console styling for AI outputs
-            if (action === 'profile') {
-                const paragraphs = data.split('\n').filter(p => p.trim() !== '');
-                const html = paragraphs.map(p => {
-                    // Sanitize input first
-                    const escaped = escapeHTML(p);
-                    
-                    // Simple markdown-ish parsing for console
-                    let clean = escaped.replace(/\*\*(.*?)\*\*/g, '<span style="color: #a5b4fc; font-weight: bold;">$1</span>');
-                    
-                    // Handle list items
-                    if (p.trim().match(/^[0-9]+\.\s/)) {
-                        return `<p style="margin-bottom: 0.5rem; line-height: 1.6; padding-left: 1rem; color: #9ca3af;">${clean}</p>`;
-                    }
-                    if (p.trim().startsWith('- ') || p.trim().startsWith('* ')) {
-                        return `<p style="margin-bottom: 0.5rem; line-height: 1.6; padding-left: 1rem; color: #9ca3af;">• ${clean.replace(/^[-*]\s/, '')}</p>`;
-                    }
+            const { validation, cleaning } = data;
+            
+            let logHtml = `
+                <div class="p-8 pb-4">
+                    <div class="text-indigo-400 font-bold text-xs uppercase tracking-widest mb-4 flex items-center">
+                        <span class="w-2 h-2 bg-indigo-500 rounded-full mr-2 animate-pulse"></span>
+                        Technical Execution Log
+                    </div>
+                    <div class="space-y-2 font-mono text-[12px]">
+            `;
 
-                    return `<p style="margin-bottom: 1rem; line-height: 1.6;">${clean}</p>`;
-                }).join('');
-
-                container.innerHTML = `
-                    <div style="padding: 1.5rem; color: #e5e7eb; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.85rem;">
-                        <h3 style="color: #818cf8; font-weight: bold; margin-bottom: 1rem; border-bottom: 1px solid #374151; padding-bottom: 0.5rem;">> Dataset Profile Analysis</h3>
-                        ${html}
-                    </div>
-                `;
-            } else if (action === 'suggest') {
-                if (!Array.isArray(data) || data.length === 0) {
-                    container.innerHTML = `<div style="padding: 1.5rem; color: #10b981; font-size: 0.85rem;">> Analysis complete. No significant issues detected.</div>`;
-                    return;
-                }
-                const cards = data.map(item => `
-                    <div style="background-color: #1f2937; border-left: 3px solid #818cf8; padding: 1rem; margin-bottom: 1rem; border-radius: 0.25rem;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: #9ca3af;">
-                            <span style="font-weight: bold; color: #e5e7eb;">col: ${escapeHTML(item.column)}</span>
-                            <span style="font-size: 0.75rem;">conf: ${Math.round(item.confidence * 100)}%</span>
-                        </div>
-                        <div style="color: #fca5a5; margin-bottom: 0.25rem;">ERR: ${escapeHTML(item.issue)}</div>
-                        <div style="color: #6ee7b7;">FIX: ${escapeHTML(item.suggestion)}</div>
-                    </div>
-                `).join('');
-                container.innerHTML = `
-                    <div style="padding: 1.5rem; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.85rem;">
-                        <h3 style="color: #818cf8; font-weight: bold; margin-bottom: 1.5rem; border-bottom: 1px solid #374151; padding-bottom: 0.5rem;">> Cleaning Suggestions Found</h3>
-                        ${cards}
-                    </div>
-                `;
+            // Validation Issues
+            if (validation.issues && validation.issues.length > 0) {
+                validation.issues.forEach(issue => {
+                    logHtml += `<div class="text-amber-400/80"><span class="text-slate-600 mr-2">[VALIDATION]</span>${escapeHTML(issue)}</div>`;
+                });
+            } else {
+                logHtml += `<div class="text-emerald-400/80"><span class="text-slate-600 mr-2">[VALIDATION]</span>No critical issues found in raw data.</div>`;
             }
+
+            // Cleaning Actions
+            if (cleaning.duplicates_removed > 0) {
+                logHtml += `<div class="text-indigo-300"><span class="text-slate-600 mr-2">[CLEANING]</span>Removed ${cleaning.duplicates_removed} duplicate row(s).</div>`;
+            }
+            if (cleaning.nulls_handled > 0) {
+                logHtml += `<div class="text-indigo-300"><span class="text-slate-600 mr-2">[CLEANING]</span>Handled ${cleaning.nulls_handled} null value(s) using strategy: <span class="text-white">${cleaning.null_strategy}</span>.</div>`;
+            }
+            
+            const renameCount = Object.keys(cleaning.columns_renamed).length;
+            if (renameCount > 0) {
+                logHtml += `<div class="text-indigo-300"><span class="text-slate-600 mr-2">[CLEANING]</span>Renamed ${renameCount} column(s) for clarity.</div>`;
+                for (const [oldName, newName] of Object.entries(cleaning.columns_renamed)) {
+                    logHtml += `<div class="text-slate-500 pl-6 text-[10px]">↳ "${oldName}" → "${newName}"</div>`;
+                }
+            }
+
+            logHtml += `
+                        <div class="text-indigo-300 pt-2"><span class="text-slate-600 mr-2">[STATUS]</span>Rows: ${cleaning.rows_before} → ${cleaning.rows_after}</div>
+                        <div class="text-emerald-400 font-bold pt-2 tracking-wide text-[10px]">✔ PIPELINE EXECUTION SUCCESSFUL</div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', logHtml);
+        };
+
+        const renderTablePreview = (data) => {
+            if (!data || data.length === 0) return;
+            const container = document.getElementById('outputContainer');
+            const previewRows = data.slice(0, 5);
+            const columns = Object.keys(previewRows[0]);
+
+            let tableHtml = `
+                <div class="px-8 py-6">
+                    <div class="text-slate-500 font-bold text-[10px] uppercase tracking-widest mb-4 flex items-center">
+                        > Cleaned Data Preview (Top 5 Rows)
+                    </div>
+                    <div class="overflow-x-auto rounded-lg border border-white/10 bg-slate-950/30">
+                        <table class="w-full text-left text-[11px] border-collapse">
+                            <thead>
+                                <tr class="border-b border-white/10 bg-white/5">
+                                    ${columns.map(col => `<th class="px-4 py-2 text-slate-300 font-semibold border-r border-white/5 last:border-0">${escapeHTML(col)}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+            previewRows.forEach(row => {
+                tableHtml += `<tr class="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">`;
+                columns.forEach(col => {
+                    const val = row[col];
+                    const displayVal = val === null || val === undefined ? '<span class="text-red-500/50">null</span>' : escapeHTML(String(val));
+                    tableHtml += `<th class="px-4 py-2 text-slate-400 font-normal border-r border-white/5 last:border-0 max-w-[200px] truncate">${displayVal}</th>`;
+                });
+                tableHtml += `</tr>`;
+            });
+
+            tableHtml += `
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-4 flex items-center justify-between">
+                        <p class="text-[10px] text-slate-500 italic">Showing 5 of ${data.length} total cleaned records.</p>
+                        <button id="btnDownloadInline" class="flex items-center space-x-2 text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-all uppercase tracking-widest">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            <span>Download Full File</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', tableHtml);
+
+            // Add download handler
+            setTimeout(() => {
+                const btn = document.getElementById('btnDownloadInline');
+                if (btn) btn.onclick = () => downloadCleanedFile(data);
+            }, 0);
+        };
+
+        const downloadCleanedFile = (data) => {
+            const format = document.getElementById('exportFormat').value;
+            if (format === 'json' || format === '') {
+                // If they are in JSON mode but click download, we'll give them a JSON file
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `cleaned_data_${Date.now()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } else {
+                // Trigger the main process again with the correct format
+                btnProcess.click();
+            }
+        };
+
+        const renderAIResult = (content, type = 'profile') => {
+            const container = document.getElementById('outputContainer');
+
+            const header = type === 'profile' ? 'Dataset Profile Analysis' : 'AI Processing Summary';
+            const color = type === 'profile' ? '#818cf8' : '#34d399';
+
+            const sectionHtml = `
+                <div class="border-b border-white/5 last:border-0 bg-slate-900/40">
+                    <div style="padding: 1.5rem 2rem 0; color: ${color}; font-family: 'Outfit', sans-serif; font-size: 0.85rem; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase;">
+                        > ${header}
+                    </div>
+                    <div id="ai_content_${type}" style="padding: 1rem 2rem 1.5rem; color: #94a3b8; font-family: 'Inter', sans-serif; font-size: 0.8rem; line-height: 1.6;">
+                        <!-- Content here -->
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', sectionHtml);
+
+            const contentDiv = document.getElementById(`ai_content_${type}`);
+            const paragraphs = content.split('\n').filter(p => p.trim() !== '');
+            
+            const html = paragraphs.map(p => {
+                const escaped = escapeHTML(p);
+                // Bold replacement
+                let clean = escaped.replace(/\*\*(.*?)\*\*/g, `<span style="color: white; font-weight: 600;">$1</span>`);
+                
+                // Bullet points
+                if (p.trim().startsWith('- ') || p.trim().startsWith('* ')) {
+                    return `<div style="display: flex; margin-bottom: 0.5rem; padding-left: 0.5rem;">
+                                <span style="color: ${color}; margin-right: 0.75rem;">•</span>
+                                <span>${clean.replace(/^[-*]\s/, '')}</span>
+                            </div>`;
+                }
+                
+                return `<p style="margin-bottom: 0.75rem;">${clean}</p>`;
+            }).join('');
+            
+            contentDiv.innerHTML = html;
         };
 
         const updateScoreUI = (score, prefix = 'score') => {
@@ -316,209 +421,146 @@
             if (!gradeEl) return;
             
             gradeEl.textContent = score.grade;
-            document.getElementById(`${prefix}Overall`).textContent = score.overall;
-            document.getElementById(`${prefix}Null`).textContent = score.null_score;
-            document.getElementById(`${prefix}Dup`).textContent = score.duplicate_score;
+            document.getElementById(`${prefix}Overall`).textContent = Math.round(score.overall);
+            document.getElementById(`${prefix}Null`).textContent = Math.round(score.null_score);
+            document.getElementById(`${prefix}Dup`).textContent = Math.round(score.duplicate_score);
 
-            // Apply colors to grade
-            gradeEl.className = `font-bold text-lg grade-${score.grade}`;
+            const progress = document.getElementById('scoreProgress');
+            progress.style.width = `${score.overall}%`;
+            
+            // Apply colors
+            gradeEl.className = `font-bold text-2xl outfit grade-${score.grade}`;
+            progress.className = `h-full transition-all duration-1000 ${score.overall > 80 ? 'bg-emerald-500' : score.overall > 60 ? 'bg-blue-500' : 'bg-amber-500'}`;
         };
 
-        // Preview Logic
-        btnPreview.addEventListener('click', async () => {
-            if (!fileInput.files[0]) return alert("Please select a file first.");
-            
-            updateStatus("Generating preview...");
-            document.getElementById('scoreContainer').classList.add('hidden');
-            document.getElementById('improvementContainer').classList.add('hidden');
-            
-            const formData = new FormData();
-            for (const file of fileInput.files) {
-                formData.append('files', file);
-            }
+        const getOptions = () => ({
+            strip_whitespace: document.getElementById('optStrip').checked,
+            standardize_columns: document.getElementById('optStandardizeCols').checked,
+            remove_empty_rows: document.getElementById('optRemoveEmpty').checked,
+            handle_nulls: document.getElementById('optNulls').value,
+            use_ai: document.getElementById('optUseAI').checked,
+            remove_duplicates: true,
+            convert_dates: true
+        });
 
-            try {
-                const response = await fetch('/api/v1/preview/file', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.message || data.error || 'Server error');
-                
-                currentJsonData = data.rows; // Store for AI
-                displayJSON(data);
-                
-                document.getElementById('scoreContainer').classList.remove('hidden');
-                document.getElementById('scoreContainer').style.display = 'flex';
-                updateScoreUI(data.quality_score);
-                document.getElementById('processingTime').textContent = 'Preview';
-                
-                updateStatus("Preview complete");
-            } catch (err) {
-                updateStatus("Error", true);
-                displayJSON({ error: err.message });
+        // Event Listeners
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        fileInput.addEventListener('change', () => {
+            const files = fileInput.files;
+            if (files.length > 0) {
+                document.getElementById('fileName').textContent = files.length === 1 ? files[0].name : `${files.length} files selected`;
+                updateStatus("Ready");
+            } else {
+                document.getElementById('fileName').textContent = "Click to upload";
             }
         });
 
-        // Process Logic
-        btnProcess.addEventListener('click', async () => {
-            if (fileInput.files.length === 0) return alert("Please select one or more files first.");
+        btnClear.addEventListener('click', () => {
+            outputContainer.innerHTML = `
+                <div class="p-8 text-slate-500 italic opacity-50 flex flex-col items-center justify-center h-full space-y-4">
+                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <p>Console cleared. Select a file to begin...</p>
+                </div>
+            `;
+            document.getElementById('scoreContainer').classList.add('hidden');
+        });
+
+        btnPreview.addEventListener('click', async () => {
+            if (fileInput.files.length === 0) return alert("Select files first");
             
-            const format = document.getElementById('exportFormat').value;
-            updateStatus(`Processing ${fileInput.files.length} files...`);
-            
+            updateStatus("Previewing...");
             const formData = new FormData();
-            for (const file of fileInput.files) {
-                formData.append('files', file);
-            }
-            formData.append('options', JSON.stringify(getOptions()));
+            for(let f of fileInput.files) formData.append('files', f);
 
             try {
-                const response = await fetch(`/api/v1/process/file?format=${format}`, {
-                    method: 'POST',
+                const response = await fetch('/api/v1/preview/file', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || "Preview failed");
+                
+                outputContainer.innerHTML = '';
+                renderTablePreview(data.rows);
+                displayJSON(data);
+                
+                document.getElementById('scoreContainer').classList.remove('hidden');
+                updateScoreUI(data.quality_score);
+                updateStatus("Preview ready");
+            } catch (err) {
+                updateStatus(err.message, true);
+            }
+        });
+
+        btnProcess.addEventListener('click', async () => {
+            if (fileInput.files.length === 0) return alert("Select files first");
+            
+            const fmt = document.getElementById('exportFormat').value;
+            updateStatus("Processing...");
+            
+            const formData = new FormData();
+            for(let f of fileInput.files) formData.append('files', f);
+            formData.append('options', JSON.stringify(getOptions()));
+
+            const headers = {};
+            if (groqApiKeyInput.value) headers['X-Groq-Api-Key'] = groqApiKeyInput.value;
+
+            try {
+                const response = await fetch(`/api/v1/process/file?format=${fmt}`, { 
+                    method: 'POST', 
                     body: formData,
-                    headers: {
-                        'X-Groq-Api-Key': document.getElementById('groqApiKey').value
-                    }
+                    headers: headers
                 });
-
-                if (!response.ok) {
-                    const data = await response.json();
-                    throw new Error(data.message || data.error || 'Server error');
-                }
-
-                const timing = response.headers.get('X-Processing-Time-Ms');
-                if(timing) document.getElementById('processingTime').textContent = `${timing}ms`;
-
-                if (format === 'json') {
-                    const data = await response.json();
-                    currentJsonData = data.data; // Store for AI
-                    
-                    if (data.ai_profile || data.ai_summary) {
-                        const container = document.getElementById('outputContainer');
-                        container.innerHTML = '';
-                        
-                        if (data.ai_profile) {
-                            renderAIResult(data.ai_profile, 'profile');
-                        }
-                        
-                        if (data.ai_summary) {
-                            const summaryHtml = `
-                                <div style="padding: 1.5rem 1.5rem 0; color: #818cf8; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.85rem; font-weight: bold; border-top: 1px solid #374151; margin-top: 1rem;">
-                                    > AI Processing Summary
-                                </div>
-                            `;
-                            container.insertAdjacentHTML('beforeend', summaryHtml);
-                            
-                            const tempDiv = document.createElement('div');
-                            tempDiv.id = 'tempSummary';
-                            container.appendChild(tempDiv);
-                            
-                            const paragraphs = data.ai_summary.split('\n').filter(p => p.trim() !== '');
-                            const html = paragraphs.map(p => {
-                                const escaped = escapeHTML(p);
-                                let clean = escaped.replace(/\*\*(.*?)\*\*/g, '<span style="color: #a5b4fc; font-weight: bold;">$1</span>');
-                                if (p.trim().match(/^[0-9]+\.\s/)) {
-                                    return `<p style="margin-bottom: 0.5rem; line-height: 1.6; padding-left: 1rem; color: #9ca3af;">${clean}</p>`;
-                                }
-                                if (p.trim().startsWith('- ') || p.trim().startsWith('* ')) {
-                                    return `<p style="margin-bottom: 0.5rem; line-height: 1.6; padding-left: 1rem; color: #9ca3af;">• ${clean.replace(/^[-*]\s/, '')}</p>`;
-                                }
-                                return `<p style="margin-bottom: 1rem; line-height: 1.6;">${clean}</p>`;
-                            }).join('');
-                            
-                            tempDiv.innerHTML = `<div style="padding: 1rem 1.5rem; color: #e5e7eb; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.85rem;">${html}</div>`;
-                        }
-
-                        // Always append the actual data header and JSON below
-                        container.insertAdjacentHTML('beforeend', `
-                            <div style="padding: 1.5rem 1.5rem 0; color: #34d399; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.85rem; font-weight: bold; border-top: 1px solid #374151; margin-top: 1rem;">
-                                > Cleaned Dataset (JSON)
-                            </div>
-                            <pre id="finalJsonOutput" style="padding: 1rem 1.5rem; color: #e5e7eb; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.85rem; overflow-x: auto;"></pre>
-                        `);
-                        document.getElementById('finalJsonOutput').textContent = JSON.stringify(data, null, 2);
-                    } else {
-                        displayJSON(data);
-                    }
-                    
-                    document.getElementById('scoreContainer').classList.remove('hidden');
-                    document.getElementById('scoreContainer').style.display = 'flex';
-                    updateScoreUI(data.quality_score_after);
-                    
-                    const before = data.quality_score_before;
-                    const after = data.quality_score_after;
-                    
-                    if (before.overall < after.overall) {
-                        const impContainer = document.getElementById('improvementContainer');
-                        impContainer.classList.remove('hidden');
-                        impContainer.style.display = 'flex';
-                        document.getElementById('beforeGrade').textContent = before.grade;
-                        document.getElementById('beforeScore').textContent = before.overall;
-                        // document.getElementById('afterGrade').textContent = after.grade;
-                        // document.getElementById('afterScore').textContent = after.overall;
-                    } else {
-                        document.getElementById('improvementContainer').style.display = 'none';
-                    }
-                    
-                    updateStatus("Process complete");
-                } else {
+                
+                if (fmt !== 'json' && response.ok) {
                     const blob = await response.blob();
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    const ext = format === 'csv' ? 'csv' : 'xlsx';
-                    a.download = `cleaned_data.${ext}`;
+                    a.download = `cleaned_data_${Date.now()}.${fmt === 'excel' ? 'xlsx' : 'csv'}`;
                     document.body.appendChild(a);
                     a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-                    
-                    updateStatus("Download complete");
-                    displayJSON({ message: `File downloaded successfully as ${ext.toUpperCase()}` });
+                    updateStatus("Download started");
+                    return;
                 }
-            } catch (err) {
-                updateStatus("Error", true);
-                displayJSON({ error: err.message });
-            }
-        });
-
-        // AI Logic
-        const callAIEndpoint = async (action, loadingMsg) => {
-            if (!currentJsonData) return alert("Please preview or process a dataset first to get JSON data for the AI.");
-            
-            const apiKey = document.getElementById('groqApiKey').value.trim();
-            const headers = { 'Content-Type': 'application/json' };
-            if (apiKey) {
-                headers['X-Groq-Api-Key'] = apiKey;
-            }
-
-            updateStatus(loadingMsg);
-            
-            try {
-                const response = await fetch(`/api/v1/ai/analyze`, {
-                    method: 'POST',
-                    headers: headers,
-                    body: JSON.stringify({ action: action, data: currentJsonData })
-                });
 
                 const data = await response.json();
+                if (!response.ok) throw new Error(data.error || "Process failed");
+
+                outputContainer.innerHTML = '';
                 
-                if (!response.ok) {
-                    throw new Error(data.message || data.error || 'Server error');
+                // 1. Technical Log
+                renderTechnicalLog(data);
+
+                // 2. AI Results
+                if (data.ai_profile) renderAIResult(data.ai_profile, 'profile');
+                if (data.ai_summary) renderAIResult(data.ai_summary, 'summary');
+
+                // 3. Table Preview
+                renderTablePreview(data.data);
+
+                // 4. Raw JSON (Hidden/Collapsed by default in many terminals, but we'll show it at the end)
+                const jsonHeader = document.createElement('div');
+                jsonHeader.style = "padding: 2rem 2rem 0; color: #475569; font-family: 'Outfit', sans-serif; font-size: 0.75rem; font-weight: bold; letter-spacing: 0.1em; text-transform: uppercase; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 1rem;";
+                jsonHeader.textContent = "> Cleaned Raw Data (JSON View)";
+                outputContainer.appendChild(jsonHeader);
+
+                displayJSON(data.data);
+
+                document.getElementById('scoreContainer').classList.remove('hidden');
+                updateScoreUI(data.quality_score_after);
+                
+                if (data.quality_score_after.overall > data.quality_score_before.overall) {
+                    const imp = document.getElementById('improvementContainer');
+                    imp.classList.remove('hidden');
+                    imp.style.display = 'flex';
+                    document.getElementById('beforeGrade').textContent = data.quality_score_before.grade;
+                    document.getElementById('beforeScore').textContent = Math.round(data.quality_score_before.overall);
                 }
 
-                renderAIResult(data, action);
-                updateStatus(`AI ${action} complete`);
+                updateStatus("Process complete");
             } catch (err) {
-                updateStatus("AI Error", true);
-                displayJSON({ error: err.message });
+                updateStatus(err.message, true);
             }
-        };
-
-        btnSuggest.addEventListener('click', () => callAIEndpoint('suggest', 'Getting AI suggestions...'));
-        btnProfile.addEventListener('click', () => callAIEndpoint('profile', 'Generating AI profile...'));
+        });
     </script>
 </body>
 </html>

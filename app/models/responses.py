@@ -46,6 +46,7 @@ class CleaningReport(BaseModel):
     duplicates_removed: int
     nulls_handled: int
     columns_renamed: dict[str, str]
+    null_strategy: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

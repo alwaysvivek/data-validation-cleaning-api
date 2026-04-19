@@ -175,6 +175,7 @@ class DataCleaner:
             duplicates_removed=dups_before if options.remove_duplicates else 0,
             nulls_handled=nulls_handled,
             columns_renamed=columns_renamed,
+            null_strategy=options.handle_nulls,
         )
         logger.info("Cleaning complete: %d → %d rows", rows_before, len(df))
         return df, report
