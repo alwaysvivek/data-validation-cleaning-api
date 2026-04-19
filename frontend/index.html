@@ -234,6 +234,19 @@
         });
 
         // UI Updates
+        const escapeHTML = (str) => {
+            if (!str || typeof str !== 'string') return str;
+            return str.replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[m];
+            });
+        };
+
         const updateStatus = (msg, isError = false) => {
             const el = document.getElementById('statusIndicator');
             el.textContent = msg;
@@ -256,10 +269,27 @@
             // Console styling for AI outputs
             if (action === 'profile') {
                 const paragraphs = data.split('\n').filter(p => p.trim() !== '');
-                const html = paragraphs.map(p => `<p style="margin-bottom: 1rem; line-height: 1.6;">${p}</p>`).join('');
+                const html = paragraphs.map(p => {
+                    // Sanitize input first
+                    const escaped = escapeHTML(p);
+                    
+                    // Simple markdown-ish parsing for console
+                    let clean = escaped.replace(/\*\*(.*?)\*\*/g, '<span style="color: #a5b4fc; font-weight: bold;">$1</span>');
+                    
+                    // Handle list items
+                    if (p.trim().match(/^[0-9]+\.\s/)) {
+                        return `<p style="margin-bottom: 0.5rem; line-height: 1.6; padding-left: 1rem; color: #9ca3af;">${clean}</p>`;
+                    }
+                    if (p.trim().startsWith('- ') || p.trim().startsWith('* ')) {
+                        return `<p style="margin-bottom: 0.5rem; line-height: 1.6; padding-left: 1rem; color: #9ca3af;">• ${clean.replace(/^[-*]\s/, '')}</p>`;
+                    }
+
+                    return `<p style="margin-bottom: 1rem; line-height: 1.6;">${clean}</p>`;
+                }).join('');
+
                 container.innerHTML = `
                     <div style="padding: 1.5rem; color: #e5e7eb; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.85rem;">
-                        <h3 style="color: #818cf8; font-weight: bold; margin-bottom: 1rem; border-bottom: 1px solid #374151; padding-bottom: 0.5rem;">> Dataset Profile</h3>
+                        <h3 style="color: #818cf8; font-weight: bold; margin-bottom: 1rem; border-bottom: 1px solid #374151; padding-bottom: 0.5rem;">> Dataset Profile Analysis</h3>
                         ${html}
                     </div>
                 `;
@@ -271,11 +301,11 @@
                 const cards = data.map(item => `
                     <div style="background-color: #1f2937; border-left: 3px solid #818cf8; padding: 1rem; margin-bottom: 1rem; border-radius: 0.25rem;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: #9ca3af;">
-                            <span style="font-weight: bold; color: #e5e7eb;">col: ${item.column}</span>
+                            <span style="font-weight: bold; color: #e5e7eb;">col: ${escapeHTML(item.column)}</span>
                             <span style="font-size: 0.75rem;">conf: ${Math.round(item.confidence * 100)}%</span>
                         </div>
-                        <div style="color: #fca5a5; margin-bottom: 0.25rem;">ERR: ${item.issue}</div>
-                        <div style="color: #6ee7b7;">FIX: ${item.suggestion}</div>
+                        <div style="color: #fca5a5; margin-bottom: 0.25rem;">ERR: ${escapeHTML(item.issue)}</div>
+                        <div style="color: #6ee7b7;">FIX: ${escapeHTML(item.suggestion)}</div>
                     </div>
                 `).join('');
                 container.innerHTML = `

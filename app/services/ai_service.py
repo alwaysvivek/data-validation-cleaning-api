@@ -41,6 +41,20 @@ class GroqAIService:
         )
         return response.choices[0].message.content or ""
 
+    def _clean_response(self, text: str) -> str:
+        """Sanitize AI response by removing markdown code blocks and excess whitespace."""
+        text = text.strip()
+        if text.startswith("```"):
+            lines = text.splitlines()
+            # Remove ```json or ``` at the start
+            if lines[0].startswith("```"):
+                lines = lines[1:]
+            # Remove ``` at the end
+            if lines and lines[-1].strip().startswith("```"):
+                lines = lines[:-1]
+            text = "\n".join(lines).strip()
+        return text
+
     @staticmethod
     def _df_sample(df: pd.DataFrame, n: int = 5) -> str:
         """Return a compact string representation of the first *n* rows."""
@@ -59,8 +73,9 @@ class GroqAIService:
         user = f"Dataset sample:\n```\n{self._df_sample(df)}\n```\nTotal rows: {len(df)}"
 
         raw = self._chat(system, user)
+        clean_raw = self._clean_response(raw)
         try:
-            items = json.loads(raw)
+            items = json.loads(clean_raw)
             return [AISuggestion(**item) for item in items]
         except (json.JSONDecodeError, Exception) as exc:
             logger.warning("Failed to parse AI suggestions: %s", exc)
@@ -80,8 +95,9 @@ class GroqAIService:
         user = f"Values:\n{json.dumps(values)}"
 
         raw = self._chat(system, user)
+        clean_raw = self._clean_response(raw)
         try:
-            result = json.loads(raw)
+            result = json.loads(clean_raw)
             return AIStandardizeResult(
                 original_values=values,
                 standardized_values=result.get("standardized_values", []),
@@ -101,8 +117,11 @@ class GroqAIService:
 
         system = (
             "You are a data quality analyst. Given a CSV sample and basic stats, "
-            "write a concise, professional data quality summary (3-5 paragraphs). "
-            "Highlight the most critical issues and recommend next steps."
+            "write a punchy, high-level data quality summary. "
+            "Focus on identifying subtle patterns, anomalies, and structural risks. "
+            "Do NOT just list the row/column counts or null stats again — interpret what they mean for the user. "
+            "Highlight the top 3 critical issues and provide clear recommendations. "
+            "Use markdown bolding for emphasis and lists for readability."
         )
         stats = (
             f"Shape: {df.shape[0]} rows × {df.shape[1]} columns\n"
