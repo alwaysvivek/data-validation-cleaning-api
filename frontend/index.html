@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Validation & Cleaning API</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for the console / output area */
+        .console-output {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            white-space: pre-wrap;
+            background-color: #111827; /* Tailwind gray-900 */
+            color: #d1d5db; /* Tailwind gray-300 */
+            border-radius: 0.375rem;
+            height: 100%;
+            overflow-y: auto;
+        }
+        
+        .console-output pre {
+            margin: 0;
+            padding: 1.5rem;
+        }
+
+        /* Subtle scrollbars for the console */
+        .console-output::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .console-output::-webkit-scrollbar-track {
+            background: #1f2937; 
+            border-radius: 4px;
+        }
+        .console-output::-webkit-scrollbar-thumb {
+            background: #4b5563; 
+            border-radius: 4px;
+        }
+        .console-output::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; 
+        }
+
+        /* Score strip colors */
+        .grade-A { color: #10b981; } /* emerald-500 */
+        .grade-B { color: #3b82f6; } /* blue-500 */
+        .grade-C { color: #eab308; } /* yellow-500 */
+        .grade-D { color: #f97316; } /* orange-500 */
+        .grade-F { color: #ef4444; } /* red-500 */
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col">
+
+    <!-- Header: Understated and minimal -->
+    <header class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-baseline">
+            <h1 class="text-lg font-medium tracking-tight text-gray-900">Data Validation & Cleaning</h1>
+            <a href="/docs" target="_blank" class="text-sm text-gray-500 hover:text-indigo-600 transition">
+                API Docs
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Content: Two columns -->
+    <main class="flex-grow max-w-7xl mx-auto px-6 py-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-10">
+        
+        <!-- Left Column: Controls (Stacked Workflow) -->
+        <section class="lg:col-span-4 flex flex-col space-y-8">
+            
+            <!-- Step 1: Upload -->
+            <div class="space-y-4">
+                <h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">1. Upload</h2>
+                
+                <form id="uploadForm" class="space-y-3">
+                    <div>
+                        <input type="file" id="fileInput" accept=".csv, .xlsx, .xls" required
+                            class="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 transition">
+                    </div>
+                    <button type="button" id="btnPreview" 
+                        class="w-full bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 py-2 rounded-md text-sm font-medium transition shadow-sm">
+                        Preview Data
+                    </button>
+                </form>
+            </div>
+
+            <hr class="border-gray-200">
+
+            <!-- Step 2: Options -->
+            <div class="space-y-4">
+                <h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">2. Cleaning Options</h2>
+                
+                <div class="space-y-2 text-sm text-gray-600">
+                    <label class="flex items-center space-x-2 cursor-pointer hover:text-gray-900">
+                        <input type="checkbox" id="optStrip" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked>
+                        <span>Strip Whitespace</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer hover:text-gray-900">
+                        <input type="checkbox" id="optStandardizeCols" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked>
+                        <span>Standardize Column Names</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer hover:text-gray-900">
+                        <input type="checkbox" id="optRemoveEmpty" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked>
+                        <span>Remove Fully Empty Rows</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer hover:text-gray-900">
+                        <input type="checkbox" id="optRemoveDups" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked>
+                        <span>Remove Duplicate Rows</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer hover:text-gray-900">
+                        <input type="checkbox" id="optConvertDates" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked>
+                        <span>Auto-convert Dates</span>
+                    </label>
+                    
+                    <div class="pt-3">
+                        <label class="block font-medium text-gray-700 mb-1">Null Strategy</label>
+                        <select id="optHandleNulls" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-2 px-3 border bg-white">
+                            <option value="none">None (Leave as-is)</option>
+                            <option value="drop">Drop row</option>
+                            <option value="fill_empty" selected>Fill empty string</option>
+                            <option value="fill_mean">Fill Mean (numeric)</option>
+                            <option value="fill_median">Fill Median (numeric)</option>
+                            <option value="fill_mode">Fill Mode</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-gray-200">
+
+            <!-- Step 3: AI Tools (De-emphasized) -->
+            <div class="space-y-4">
+                <h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase flex justify-between items-center">
+                    3. AI Layer <span class="text-[10px] bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">Optional</span>
+                </h2>
+                
+                <div class="space-y-3">
+                    <input type="password" id="groqApiKey" placeholder="Groq API Key (uses env default if blank)" 
+                        class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-2 px-3 border bg-white">
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" id="btnSuggest" 
+                            class="bg-gray-100 hover:bg-gray-200 text-gray-600 py-1.5 rounded-md text-sm font-medium transition">
+                            Suggest Fixes
+                        </button>
+                        <button type="button" id="btnProfile" 
+                            class="bg-gray-100 hover:bg-gray-200 text-gray-600 py-1.5 rounded-md text-sm font-medium transition">
+                            Profile Dataset
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-gray-200">
+
+            <!-- Step 4: Process -->
+            <div class="space-y-4 pb-10">
+                <h2 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">4. Execution</h2>
+                
+                <div class="space-y-3">
+                    <select id="exportFormat" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-2 px-3 border bg-white">
+                        <option value="json" selected>Output to Console (JSON)</option>
+                        <option value="csv">Download CSV</option>
+                        <option value="excel">Download Excel</option>
+                    </select>
+
+                    <button type="button" id="btnProcess" 
+                        class="w-full bg-indigo-600 text-white hover:bg-indigo-700 py-2.5 rounded-md text-sm font-medium transition shadow-sm">
+                        Execute Pipeline
+                    </button>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Right Column: Output Console -->
+        <section class="lg:col-span-8 flex flex-col h-[calc(100vh-140px)]">
+            
+            <!-- Output Header & Status -->
+            <div class="flex justify-between items-end mb-3">
+                <div class="flex items-center gap-3">
+                    <h2 class="text-sm font-semibold text-gray-700">Console</h2>
+                    <span id="statusIndicator" class="text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 font-medium tracking-wide">Ready</span>
+                </div>
+                <span id="processingTime" class="text-xs text-gray-400 font-mono"></span>
+            </div>
+
+            <!-- Metrics Strip (Hidden initially) -->
+            <div id="scoreContainer" class="hidden flex items-center gap-6 mb-4 px-4 py-2.5 bg-white border border-gray-200 rounded-md shadow-sm text-sm">
+                <div class="flex items-center gap-2 border-r border-gray-200 pr-6">
+                    <span class="text-gray-500 uppercase tracking-wide text-xs">Grade</span>
+                    <span id="scoreGrade" class="font-bold text-lg">-</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-500">Overall:</span>
+                    <span id="scoreOverall" class="font-medium text-gray-900">-</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-500">Nulls:</span>
+                    <span id="scoreNull" class="font-medium text-gray-900">-</span>
+                </div>
+                <div class="flex items-center gap-2 border-r border-gray-200 pr-6">
+                    <span class="text-gray-500">Dups:</span>
+                    <span id="scoreDup" class="font-medium text-gray-900">-</span>
+                </div>
+                <div id="improvementContainer" class="hidden text-xs font-medium text-emerald-600 flex items-center gap-1">
+                    <span>Improved from <span id="beforeGrade" class="font-bold"></span> (<span id="beforeScore"></span>)</span>
+                </div>
+            </div>
+
+            <!-- Console Window -->
+            <div class="console-output shadow-inner border border-gray-800" id="outputContainer">
+                <pre id="jsonOutput" class="text-xs text-gray-400">System initialized. Awaiting input...</pre>
+            </div>
+
+        </section>
+    </main>
+
+    <script>
+        // DOM Elements
+        const fileInput = document.getElementById('fileInput');
+        const btnPreview = document.getElementById('btnPreview');
+        const btnProcess = document.getElementById('btnProcess');
+        const btnSuggest = document.getElementById('btnSuggest');
+        const btnProfile = document.getElementById('btnProfile');
+        
+        let currentJsonData = null; // Store dataset for AI requests
+        
+        // Options
+        const getOptions = () => ({
+            strip_whitespace: document.getElementById('optStrip').checked,
+            standardize_columns: document.getElementById('optStandardizeCols').checked,
+            remove_empty_rows: document.getElementById('optRemoveEmpty').checked,
+            handle_nulls: document.getElementById('optHandleNulls').value,
+            remove_duplicates: document.getElementById('optRemoveDups').checked,
+            convert_dates: document.getElementById('optConvertDates').checked,
+        });
+
+        // UI Updates
+        const updateStatus = (msg, isError = false) => {
+            const el = document.getElementById('statusIndicator');
+            el.textContent = msg;
+            if (isError) {
+                el.className = 'text-[11px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium tracking-wide';
+            } else if (msg === 'Ready') {
+                el.className = 'text-[11px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 font-medium tracking-wide';
+            } else {
+                el.className = 'text-[11px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium tracking-wide';
+            }
+        };
+
+        const displayJSON = (data) => {
+            document.getElementById('outputContainer').innerHTML = `<pre id="jsonOutput" class="text-xs"></pre>`;
+            document.getElementById('jsonOutput').textContent = JSON.stringify(data, null, 2);
+        };
+
+        const renderAIResult = (data, action) => {
+            const container = document.getElementById('outputContainer');
+            // Console styling for AI outputs
+            if (action === 'profile') {
+                const paragraphs = data.split('\n').filter(p => p.trim() !== '');
+                const html = paragraphs.map(p => `<p style="margin-bottom: 1rem; line-height: 1.6;">${p}</p>`).join('');
+                container.innerHTML = `
+                    <div style="padding: 1.5rem; color: #e5e7eb; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.85rem;">
+                        <h3 style="color: #818cf8; font-weight: bold; margin-bottom: 1rem; border-bottom: 1px solid #374151; padding-bottom: 0.5rem;">> Dataset Profile</h3>
+                        ${html}
+                    </div>
+                `;
+            } else if (action === 'suggest') {
+                if (!Array.isArray(data) || data.length === 0) {
+                    container.innerHTML = `<div style="padding: 1.5rem; color: #10b981; font-size: 0.85rem;">> Analysis complete. No significant issues detected.</div>`;
+                    return;
+                }
+                const cards = data.map(item => `
+                    <div style="background-color: #1f2937; border-left: 3px solid #818cf8; padding: 1rem; margin-bottom: 1rem; border-radius: 0.25rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: #9ca3af;">
+                            <span style="font-weight: bold; color: #e5e7eb;">col: ${item.column}</span>
+                            <span style="font-size: 0.75rem;">conf: ${Math.round(item.confidence * 100)}%</span>
+                        </div>
+                        <div style="color: #fca5a5; margin-bottom: 0.25rem;">ERR: ${item.issue}</div>
+                        <div style="color: #6ee7b7;">FIX: ${item.suggestion}</div>
+                    </div>
+                `).join('');
+                container.innerHTML = `
+                    <div style="padding: 1.5rem; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.85rem;">
+                        <h3 style="color: #818cf8; font-weight: bold; margin-bottom: 1.5rem; border-bottom: 1px solid #374151; padding-bottom: 0.5rem;">> Cleaning Suggestions Found</h3>
+                        ${cards}
+                    </div>
+                `;
+            }
+        };
+
+        const updateScoreUI = (score, prefix = 'score') => {
+            const gradeEl = document.getElementById(`${prefix}Grade`);
+            if (!gradeEl) return;
+            
+            gradeEl.textContent = score.grade;
+            document.getElementById(`${prefix}Overall`).textContent = score.overall;
+            document.getElementById(`${prefix}Null`).textContent = score.null_score;
+            document.getElementById(`${prefix}Dup`).textContent = score.duplicate_score;
+
+            // Apply colors to grade
+            gradeEl.className = `font-bold text-lg grade-${score.grade}`;
+        };
+
+        // Preview Logic
+        btnPreview.addEventListener('click', async () => {
+            if (!fileInput.files[0]) return alert("Please select a file first.");
+            
+            updateStatus("Generating preview...");
+            document.getElementById('scoreContainer').classList.add('hidden');
+            document.getElementById('improvementContainer').classList.add('hidden');
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/api/v1/preview/file', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message || data.error || 'Server error');
+                
+                currentJsonData = data.rows; // Store for AI
+                displayJSON(data);
+                
+                document.getElementById('scoreContainer').classList.remove('hidden');
+                document.getElementById('scoreContainer').style.display = 'flex';
+                updateScoreUI(data.quality_score);
+                document.getElementById('processingTime').textContent = 'Preview';
+                
+                updateStatus("Preview complete");
+            } catch (err) {
+                updateStatus("Error", true);
+                displayJSON({ error: err.message });
+            }
+        });
+
+        // Process Logic
+        btnProcess.addEventListener('click', async () => {
+            if (!fileInput.files[0]) return alert("Please select a file first.");
+            
+            const format = document.getElementById('exportFormat').value;
+            updateStatus(`Processing (${format})...`);
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('options', JSON.stringify(getOptions()));
+
+            try {
+                const response = await fetch(`/api/v1/process/file?format=${format}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.message || data.error || 'Server error');
+                }
+
+                const timing = response.headers.get('X-Processing-Time-Ms');
+                if(timing) document.getElementById('processingTime').textContent = `${timing}ms`;
+
+                if (format === 'json') {
+                    const data = await response.json();
+                    currentJsonData = data.data; // Store for AI
+                    displayJSON(data);
+                    
+                    document.getElementById('scoreContainer').classList.remove('hidden');
+                    document.getElementById('scoreContainer').style.display = 'flex';
+                    updateScoreUI(data.quality_score_after);
+                    
+                    const before = data.quality_score_before;
+                    const after = data.quality_score_after;
+                    
+                    if (before.overall < after.overall) {
+                        const impContainer = document.getElementById('improvementContainer');
+                        impContainer.classList.remove('hidden');
+                        impContainer.style.display = 'flex';
+                        document.getElementById('beforeGrade').textContent = before.grade;
+                        document.getElementById('beforeScore').textContent = before.overall;
+                        // document.getElementById('afterGrade').textContent = after.grade;
+                        // document.getElementById('afterScore').textContent = after.overall;
+                    } else {
+                        document.getElementById('improvementContainer').style.display = 'none';
+                    }
+                    
+                    updateStatus("Process complete");
+                } else {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const ext = format === 'csv' ? 'csv' : 'xlsx';
+                    a.download = `cleaned_data.${ext}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    updateStatus("Download complete");
+                    displayJSON({ message: `File downloaded successfully as ${ext.toUpperCase()}` });
+                }
+            } catch (err) {
+                updateStatus("Error", true);
+                displayJSON({ error: err.message });
+            }
+        });
+
+        // AI Logic
+        const callAIEndpoint = async (action, loadingMsg) => {
+            if (!currentJsonData) return alert("Please preview or process a dataset first to get JSON data for the AI.");
+            
+            const apiKey = document.getElementById('groqApiKey').value.trim();
+            const headers = { 'Content-Type': 'application/json' };
+            if (apiKey) {
+                headers['X-Groq-Api-Key'] = apiKey;
+            }
+
+            updateStatus(loadingMsg);
+            
+            try {
+                const response = await fetch(`/api/v1/ai/analyze`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ action: action, data: currentJsonData })
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.message || data.error || 'Server error');
+                }
+
+                renderAIResult(data, action);
+                updateStatus(`AI ${action} complete`);
+            } catch (err) {
+                updateStatus("AI Error", true);
+                displayJSON({ error: err.message });
+            }
+        };
+
+        btnSuggest.addEventListener('click', () => callAIEndpoint('suggest', 'Getting AI suggestions...'));
+        btnProfile.addEventListener('click', () => callAIEndpoint('profile', 'Generating AI profile...'));
+    </script>
+</body>
+</html>
