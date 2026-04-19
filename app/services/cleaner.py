@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Optional, Tuple
+from typing import Optional, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.services.ai_service import GroqAIService
 
 import pandas as pd
 
@@ -30,6 +33,7 @@ class DataCleaner:
         df: pd.DataFrame,
         options: CleaningOptions,
         limit: Optional[int] = None,
+        ai_service: Optional[GroqAIService] = None,
     ) -> Tuple[pd.DataFrame, CleaningReport]:
         """Apply cleaning operations and return the cleaned DataFrame + report."""
 
@@ -51,6 +55,14 @@ class DataCleaner:
             for col in str_cols:
                 df[col] = df[col].astype(str).str.strip().replace("nan", pd.NA)
             logger.info("Stripped whitespace on %d string column(s)", len(str_cols))
+
+        # ---- 2.5 AI-Powered Renaming ---------------------------------------
+        if options.use_ai and ai_service:
+            ai_renames = ai_service.suggest_column_renames(df)
+            if ai_renames:
+                df.rename(columns=ai_renames, inplace=True)
+                columns_renamed.update(ai_renames)
+                logger.info("AI suggested %d column rename(s)", len(ai_renames))
 
         # ---- 3. Standardize column names -----------------------------------
         if options.standardize_columns:

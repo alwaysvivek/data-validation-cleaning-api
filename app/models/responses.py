@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -60,6 +60,7 @@ class ProcessResult(BaseModel):
     quality_score_after: DataQualityScore
     data: list[dict[str, Any]]
     processing_time_ms: float
+    ai_summary: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

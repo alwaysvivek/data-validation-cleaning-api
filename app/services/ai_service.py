@@ -132,3 +132,34 @@ class GroqAIService:
         user = f"Dataset sample:\n```\n{self._df_sample(df)}\n```\n\nStats:\n{stats}"
 
         return self._chat(system, user)
+
+    def suggest_column_renames(self, df: pd.DataFrame) -> dict[str, str]:
+        """Suggest better names for 'Unnamed' or messy columns."""
+        logger.info("Requesting AI column renames")
+        system = (
+            "Analyze the dataset sample and suggest better names for columns, "
+            "especially those named 'Unnamed: X' or which are clearly messy. "
+            "Return ONLY a JSON object mapping old_name -> new_name. "
+            "If a name is already good, exclude it from the mapping."
+        )
+        user = f"Sample:\n{self._df_sample(df)}"
+        raw = self._chat(system, user)
+        try:
+            return json.loads(self._clean_response(raw))
+        except Exception:
+            return {}
+
+    def generate_cleaning_summary(self, report: dict, score_before: dict, score_after: dict) -> str:
+        """Write a concise summary of what was cleaned and why."""
+        logger.info("Requesting AI cleaning summary")
+        system = (
+            "You are a data cleaning assistant. Briefly summarize what was changed in the dataset. "
+            "Focus on why these changes improved the quality. Be punchy and professional. "
+            "Use markdown for lists."
+        )
+        user = (
+            f"Cleaning Report: {json.dumps(report)}\n"
+            f"Quality Before: {json.dumps(score_before)}\n"
+            f"Quality After: {json.dumps(score_after)}"
+        )
+        return self._chat(system, user)

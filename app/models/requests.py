@@ -18,6 +18,7 @@ class CleaningOptions(BaseModel):
     standardize_columns: bool = True
     remove_empty_rows: bool = True
     convert_dates: bool = True
+    use_ai: bool = False
 
 
 class DataPayload(BaseModel):

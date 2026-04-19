@@ -9,7 +9,7 @@ import time
 from typing import Literal, Optional
 
 import pandas as pd
-from fastapi import APIRouter, File, Form, Query, UploadFile, Request
+from fastapi import APIRouter, File, Form, Query, UploadFile, Request, Header
 from fastapi.responses import StreamingResponse
 
 from app.limiter import limiter
@@ -21,6 +21,7 @@ from app.models.responses import PreviewResult, ProcessResult
 from app.services.cleaner import DataCleaner
 from app.services.file_handler import FileHandler
 from app.services.validator import DataValidator
+from app.services.ai_service import GroqAIService
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,7 @@ async def process_json(
     payload: DataPayload,
     format: Literal["json", "csv", "excel"] = Query("json"),
     limit: Optional[int] = Query(None, ge=1, description="Process only first N rows"),
+    x_groq_api_key: Optional[str] = Header(None),
 ):
     """Accept JSON data, run the full validate → clean → score pipeline."""
     start = time.perf_counter()
@@ -77,7 +79,8 @@ async def process_json(
     except Exception as exc:
         raise ProcessingError(f"Failed to parse input data: {exc}") from exc
 
-    return await asyncio.to_thread(_run_pipeline, df, payload.options, format, limit, start)
+    ai_service = GroqAIService(api_key=x_groq_api_key) if payload.options.use_ai else None
+    return await asyncio.to_thread(_run_pipeline, df, payload.options, format, limit, start, ai_service)
 
 
 # ---------------------------------------------------------------------------
@@ -91,6 +94,7 @@ async def process_file(
     options: str = Form("{}"),
     format: Literal["json", "csv", "excel"] = Query("json"),
     limit: Optional[int] = Query(None, ge=1, description="Process only first N rows"),
+    x_groq_api_key: Optional[str] = Header(None),
 ):
     """Upload a file and run the full validate → clean → score pipeline.
 
@@ -104,7 +108,8 @@ async def process_file(
     except Exception:
         opts = CleaningOptions()
 
-    return await asyncio.to_thread(_run_pipeline, df, opts, format, limit, start)
+    ai_service = GroqAIService(api_key=x_groq_api_key) if opts.use_ai else None
+    return await asyncio.to_thread(_run_pipeline, df, opts, format, limit, start, ai_service)
 
 
 # ---------------------------------------------------------------------------
@@ -116,17 +121,33 @@ def _run_pipeline(
     fmt: str,
     limit: int | None,
     start: float,
+    ai_service: Optional[GroqAIService] = None,
 ):
     """Execute validate → clean → score and return the appropriate format."""
+    from app.services.validator import DataValidator # local import to avoid circulars if any
+    validator = DataValidator()
+    
     # Before scores
     quality_before = validator.compute_quality_score(df)
     validation_report = validator.validate(df)
 
     # Clean
-    cleaned_df, cleaning_report = cleaner.clean(df, options, limit=limit)
+    cleaned_df, cleaning_report = cleaner.clean(df, options, limit=limit, ai_service=ai_service)
 
     # After scores
     quality_after = validator.compute_quality_score(cleaned_df)
+
+    # AI Summary
+    ai_summary = None
+    if options.use_ai and ai_service:
+        try:
+            ai_summary = ai_service.generate_cleaning_summary(
+                cleaning_report.model_dump(),
+                quality_before.model_dump(),
+                quality_after.model_dump()
+            )
+        except Exception as exc:
+            logger.warning("Failed to generate AI cleaning summary: %s", exc)
 
     elapsed = round((time.perf_counter() - start) * 1000, 2)
 
@@ -155,4 +176,5 @@ def _run_pipeline(
         quality_score_after=quality_after,
         data=data,
         processing_time_ms=elapsed,
+        ai_summary=ai_summary,
     )

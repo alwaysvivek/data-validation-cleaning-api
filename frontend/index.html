@@ -108,6 +108,10 @@
                         <input type="checkbox" id="optConvertDates" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked>
                         <span>Auto-convert Dates</span>
                     </label>
+                    <label class="flex items-center space-x-2 cursor-pointer hover:text-gray-900 font-medium text-indigo-600">
+                        <input type="checkbox" id="optUseAI" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                        <span>Smart AI Rename (Needs Key)</span>
+                    </label>
                     
                     <div class="pt-3">
                         <label class="block font-medium text-gray-700 mb-1">Null Strategy</label>
@@ -231,6 +235,7 @@
             handle_nulls: document.getElementById('optHandleNulls').value,
             remove_duplicates: document.getElementById('optRemoveDups').checked,
             convert_dates: document.getElementById('optConvertDates').checked,
+            use_ai: document.getElementById('optUseAI').checked,
         });
 
         // UI Updates
@@ -379,7 +384,10 @@
             try {
                 const response = await fetch(`/api/v1/process/file?format=${format}`, {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    headers: {
+                        'X-Groq-Api-Key': document.getElementById('groqApiKey').value
+                    }
                 });
 
                 if (!response.ok) {
@@ -393,7 +401,18 @@
                 if (format === 'json') {
                     const data = await response.json();
                     currentJsonData = data.data; // Store for AI
-                    displayJSON(data);
+                    
+                    if (data.ai_summary) {
+                        renderAIResult(data.ai_summary, 'profile');
+                        // Inject summary header
+                        document.getElementById('outputContainer').insertAdjacentHTML('afterbegin', `
+                            <div style="padding: 1.5rem 1.5rem 0; color: #818cf8; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.85rem; font-weight: bold;">
+                                > AI Processing Summary
+                            </div>
+                        `);
+                    } else {
+                        displayJSON(data);
+                    }
                     
                     document.getElementById('scoreContainer').classList.remove('hidden');
                     document.getElementById('scoreContainer').style.display = 'flex';
