@@ -407,7 +407,6 @@
                             `;
                             container.insertAdjacentHTML('beforeend', summaryHtml);
                             
-                            // Create a temporary element to use renderAIResult's logic for the summary
                             const tempDiv = document.createElement('div');
                             tempDiv.id = 'tempSummary';
                             container.appendChild(tempDiv);
@@ -427,6 +426,15 @@
                             
                             tempDiv.innerHTML = `<div style="padding: 1rem 1.5rem; color: #e5e7eb; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.85rem;">${html}</div>`;
                         }
+
+                        // Always append the actual data header and JSON below
+                        container.insertAdjacentHTML('beforeend', `
+                            <div style="padding: 1.5rem 1.5rem 0; color: #34d399; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.85rem; font-weight: bold; border-top: 1px solid #374151; margin-top: 1rem;">
+                                > Cleaned Dataset (JSON)
+                            </div>
+                            <pre id="finalJsonOutput" style="padding: 1rem 1.5rem; color: #e5e7eb; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.85rem; overflow-x: auto;"></pre>
+                        `);
+                        document.getElementById('finalJsonOutput').textContent = JSON.stringify(data, null, 2);
                     } else {
                         displayJSON(data);
                     }

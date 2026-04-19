@@ -116,11 +116,10 @@ class GroqAIService:
         logger.info("Requesting AI profile for %d-row dataset", len(df))
 
         system = (
-            "You are a data quality analyst. Given a CSV sample and basic stats, "
-            "write a punchy, high-level data quality summary. "
-            "Focus on identifying subtle patterns, anomalies, and structural risks. "
-            "Do NOT just list the row/column counts or null stats again — interpret what they mean for the user. "
-            "Highlight the top 3 critical issues and provide clear recommendations. "
+            "You are a technical data analyst. Analyze the cleaned dataset and provide a factual, "
+            "concise technical report on its state. "
+            "Describe data patterns, column relationships, and identify any significant clusters or outliers. "
+            "Keep it purely technical and data-centric. Avoid generic advice or 'data governance' talk. "
             "Use markdown bolding for emphasis and lists for readability."
         )
         stats = (
@@ -153,8 +152,9 @@ class GroqAIService:
         """Write a concise summary of what was cleaned and why."""
         logger.info("Requesting AI cleaning summary")
         system = (
-            "You are a data cleaning assistant. Briefly summarize what was changed in the dataset. "
-            "Focus on why these changes improved the quality. Be punchy and professional. "
+            "You are a data cleaning engine. Factually summarize the transformations performed in this execution. "
+            "List exactly what was changed (nulls handled, columns renamed, duplicates removed). "
+            "Keep it concise, objective, and technical. No advice, just execution facts. "
             "Use markdown for lists."
         )
         user = (
